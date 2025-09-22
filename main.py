@@ -91,12 +91,9 @@ class SmartSecuritySystem:
                 if cls == 0:
                     current_detections['persons'] += 1
                     self.total_persons_detected = max(self.total_persons_detected, current_detections['persons'])
-                elif cls in [2, 5, 7]:
+                elif cls in [1, 2, 3, 4, 5, 7]:
                     current_detections['vehicles'] += 1
-                    self.total_vehicles_detected = max(self.total_vehicles_detected, current_detections['big vehicles'])
-                elif cls in [1, 3]:
-                    current_detections['motorcycle'] += 1
-                    self.total_vehicles_detected = max(self.total_vehicles_detected, current_detections['motorcycle'])
+                    self.total_vehicles_detected = max(self.total_vehicles_detected, current_detections['vehicles'])
 
                 current_detections['total_objects'] += 1
 
@@ -154,10 +151,6 @@ class SmartSecuritySystem:
         if detections['persons'] > self.alert_threshold:
             alerts.append(f"Crowd Alert: {detections['persons']} people detected")
 
-        # High motion without object detection (potential issue)
-        if motion_percentage > 15 and detections['total_objects'] == 0:
-            alerts.append(f"Motion without objects: {motion_percentage:.1f}% motion")
-
         # Log alerts (but don't print during video)
         for alert in alerts:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -169,7 +162,6 @@ class SmartSecuritySystem:
             }
             self.detection_log.append(alert_data)
             self.total_alerts_generated += 1
-            # Don't print here - will show in summary
 
         return alerts
 
@@ -225,10 +217,12 @@ class SmartSecuritySystem:
         cap = cv2.VideoCapture(video_source)
 
         original_fps = cap.get(cv2.CAP_PROP_FPS)
-        if original_fps > 0:
-            frame_delay = int(1000 / original_fps)
+        if original_fps > 0 and original_fps < 100:
+            frame_delay = max(1, int(1000 / original_fps))
         else:
             frame_delay = 33
+
+        print(f"Video FPS: {original_fps}, Using frame delay: {frame_delay}ms")
 
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
@@ -269,7 +263,7 @@ class SmartSecuritySystem:
                 self.frame_count += 1
 
                 if isinstance(video_source, str):
-                    key = cv2.waitKey(frame_delay) & 0xFF
+                    key = cv2.waitKey(1) & 0xFF
                 else:
                     key = cv2.waitKey(1) & 0xFF
 
@@ -362,7 +356,7 @@ def main():
 
     # Run the system
     security_system.run_security_system(
-        video_source="Test Videos\test_video_3.mp4", # Change the video location for other videos
+        video_source="Test Videos/test_video_4.mp4",
         save_video=True
     )
 
